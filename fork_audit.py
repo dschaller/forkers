@@ -79,11 +79,11 @@ def forked_repos(repo_name, organization):
 
 
 def fetch_fork_collaborators(fork, organization):
-    CACHE_NAME = '{}/fork_collaborators/{}'.format(organization, fork.get('name'))
-    cached_data = _cached_data(CACHE_NAME)
-    if cached_data:
-        print('            Using cached collaborators for {}'.format(fork.get('name')))
-        return cached_data
+    # CACHE_NAME = '{}/fork_collaborators/{}'.format(organization, fork.get('name'))
+    # cached_data = _cached_data(CACHE_NAME)
+    # if cached_data:
+    #     print('            Using cached collaborators for {}'.format(fork.get('name')))
+    #     return cached_data
 
     try:
         collaborators = get(fork.get('collabortors_url'))
@@ -91,7 +91,7 @@ def fetch_fork_collaborators(fork, organization):
         print ('            {}'.format(e))
         collaborators = []
     collaborators = [collaborator.get('login') for collaborator in collaborators]
-    _cache_data(CACHE_NAME, collaborators)
+    # _cache_data(CACHE_NAME, collaborators)
     return collaborators
 
 
