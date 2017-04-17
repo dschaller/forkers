@@ -6,6 +6,12 @@ A script that:
   
 
 ## Usage
+In order to run the script you must have an environment variable set with a GitHub token that can access the organization you wish to audit. It can be set by running the following command before running the scripts.
+```bash
+export GITHUB_TOKEN=1234567890
+```
+
+You should now be able to run:
 ```bash
 python fork_audit.py -o {organization_name}
 ```
