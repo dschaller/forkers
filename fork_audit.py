@@ -1,15 +1,16 @@
 import argparse
 import json
-import logging
 import os
 import shutil
-import sys
 
 import requests
 
 MEMBERS_URL = 'https://api.github.com/orgs/{}/members'
 REPOS_URL = 'https://api.github.com/orgs/{}/repos?type=private'
 FORKS_URL = 'https://api.github.com/repos/{}/forks'
+
+FOUND_MESSAGE = 'Found {} {} for the {} organization'
+FOUND_IN_CACHE_MESSAGE = '{} (Cached)'.format(FOUND_MESSAGE)
 
 
 def find_forked_repos(**kwargs):
@@ -18,22 +19,37 @@ def find_forked_repos(**kwargs):
 
     organization = kwargs.get('organization')
     github_repos, repos_cached = organization_repos(organization)
-    print('Found {} repos for the {} organization{}'.format(len(github_repos), organization, ' (Cached)' if repos_cached else ''))
+    message = FOUND_IN_CACHE_MESSAGE if repos_cached else FOUND_MESSAGE
+    print(message.format(len(github_repos), 'repos', organization))
 
     org_members, org_members_cached = organization_members(organization)
-    print('Found {} members for the {} organization{}'.format(len(org_members), organization, ' (Cached)' if org_members_cached else ''))
+    message = FOUND_IN_CACHE_MESSAGE if org_members_cached else FOUND_MESSAGE
+    print(message.format(len(org_members), 'members', organization))
 
     for repo_name in github_repos:
         forks, forks_cached = forked_repos(repo_name, organization)
         if len(forks) == 0:
             continue
-        print('Found {} forks of repo: {}{}'.format(len(forks), repo_name, ' (Cached)' if forks_cached else ''))
+        print(
+            'Found {} forks of repo: {}{}'.format(
+                len(forks),
+                repo_name,
+                ' (Cached)' if forks_cached else ''
+            )
+        )
         if not kwargs.get('shield'):
             print('    Forkers:')
             for fork in forks:
                 print('        - {}'.format(fork.get('owner')))
-                fork_collaborators = fetch_fork_collaborators(fork, organization)
-                determine_foreign_collaborators(fork_collaborators, org_members, organization)
+                fork_collaborators = fetch_fork_collaborators(
+                    fork,
+                    organization
+                )
+                determine_foreign_collaborators(
+                    fork_collaborators,
+                    org_members,
+                    organization
+                )
 
 
 def organization_repos(organization):
@@ -72,17 +88,24 @@ def forked_repos(repo_name, organization):
         forks.append({
             'name': repo_name,
             'owner': fork.get('owner', {}).get('login'),
-            'collabortors_url': fork.get('collaborators_url').rstrip('{/collaborator}')
+            'collabortors_url': fork.get(
+                'collaborators_url'
+            ).rstrip('{/collaborator}')
         })
     _cache_data(CACHE_NAME, forks)
     return forks, False
 
 
 def fetch_fork_collaborators(fork, organization):
-    # CACHE_NAME = '{}/fork_collaborators/{}'.format(organization, fork.get('name'))
+    # CACHE_NAME = '{}/fork_collaborators/{}'.format(
+    #     organization,
+    #     fork.get('name')
+    # )
     # cached_data = _cached_data(CACHE_NAME)
     # if cached_data:
-    #     print('            Using cached collaborators for {}'.format(fork.get('name')))
+    #     print('            Using cached collaborators for {}'.format(
+    #        fork.get('name'))
+    #    )
     #     return cached_data
 
     try:
@@ -90,7 +113,9 @@ def fetch_fork_collaborators(fork, organization):
     except Exception as e:
         print ('            {}'.format(e))
         collaborators = []
-    collaborators = [collaborator.get('login') for collaborator in collaborators]
+    collaborators = [
+        collaborator.get('login') for collaborator in collaborators
+    ]
     # _cache_data(CACHE_NAME, collaborators)
     return collaborators
 
@@ -103,7 +128,7 @@ def determine_foreign_collaborators(fork_collaborators, org_members, org):
             illegal_collaborators.append(collaborator)
 
     if illegal_collaborators:
-        print('            - Potential security vulnerability: found {} collaborators not in the {} organization.'.format(len(illegal_collaborators), org))
+        print('            - Potential security vulnerability: found {} collaborators not in the {} organization.'.format(len(illegal_collaborators), org))  # noqa
     for illegal_collaborator in illegal_collaborators:
         print('                - {}'.format(illegal_collaborator))
 
@@ -134,7 +159,7 @@ def _cache_data(filename, data):
 def _clear_cache():
     try:
         shutil.rmtree('cache')
-    except OSError as e:
+    except OSError:
         pass
 
 
@@ -145,7 +170,9 @@ def get(url, pagenate=True):
         response = github_session.get(url)
         text = response.text
         if response.status_code != 200:
-            print('Encountered error during GET request: {}'.format(response.text))
+            print('Encountered error during GET request: {}'.format(
+                response.text
+            ))
             text = {}
         return json.loads(text)
     for x in xrange(10000):
@@ -157,7 +184,12 @@ def get(url, pagenate=True):
         paged_response = json.loads(response.text)
         if not paged_response or response.status_code != 200:
             if response.status_code != 200:
-                raise Exception('Encountered error during GET request to {} : {}'.format(paged_url, response.text))
+                raise Exception(
+                    'Encountered error during GET request to {} : {}'.format(
+                        paged_url,
+                        response.text
+                    )
+                )
             break
         response_data.extend(paged_response)
     return response_data
@@ -180,23 +212,29 @@ def _github_session():
 if __name__ == '__main__':
     defaut_organization = os.environ.get('ORGANIZATION')
     parser = argparse.ArgumentParser(description='Audit GitHub forks')
-    parser.add_argument('--clearcache', '-cc', default=False, action='store_true',
+    parser.add_argument('--clearcache', '-cc', default=False,
+                        action='store_true',
                         help='Clear all of the cached data.')
     # TODO: Implement additional caching logic
-    # parser.add_argument('--clearcacheorg', '-cco', default=defaut_organization, type=str,
+    # parser.add_argument('--clearcacheorg', '-cco',
+    #                    default=defaut_organization, type=str,
     #                     help='Clear all cached data for an organization.')
-    # parser.add_argument('--clearcacherepos', '-ccr', default=False, action='store_true',
+    # parser.add_argument('--clearcacherepos', '-ccr', default=False,
+    #                    action='store_true',
     #                     help='Clear cached repo data.')
-    # parser.add_argument('--clearcachemembers', '-ccm', default=False, action='store_true',
+    # parser.add_argument('--clearcachemembers', '-ccm', default=False,
+    #                    action='store_true',
     #                     help='Clear cached members data.')
-    # parser.add_argument('--clearcacheforks', '-ccf', default=False, action='store_true',
+    # parser.add_argument('--clearcacheforks', '-ccf', default=False,
+    #                    action='store_true',
     #                     help='Clear cached fork data.')
-    # parser.add_argument('--clearcacheforkcollab', '-ccfc', default=False, action='store_true',
+    # parser.add_argument('--clearcacheforkcollab', '-ccfc', default=False,
+    #                    action='store_true',
     #                     help='Clear cached fork collaborators data.')
-    parser.add_argument('--organization', '-o', default=defaut_organization, type=str,
-                        help='The GitHub organization to audit.')
+    parser.add_argument('--organization', '-o', default=defaut_organization,
+                        type=str, help='The GitHub organization to audit.')
     parser.add_argument('--shield', '-s', default=False, action='store_true',
                         help='The GitHub organization to audit.')
 
     args = parser.parse_args()
-    forked_repos = find_forked_repos(**vars(args))
+    find_forked_repos(**vars(args))
