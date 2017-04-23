@@ -1,4 +1,5 @@
 # Forkers
+[![Build Status](https://travis-ci.com/dschaller/forkers.svg?token=S1PppF2H8FVrQHs8pw3M&branch=master)](https://travis-ci.com/dschaller/forkers)
 
 A script that:
   - finds and reports users who have forked an organizations repos
