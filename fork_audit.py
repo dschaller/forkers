@@ -128,7 +128,7 @@ def determine_foreign_collaborators(fork_collaborators, org_members, org):
             illegal_collaborators.append(collaborator)
 
     if illegal_collaborators:
-        print('            - Potential security vulnerability: found {} collaborators not in the {} organization.'.format(len(illegal_collaborators), org))  # noqa
+        print('            - Potential security vulnerability: found {} collaborators not in the {} organization.'.format(len(illegal_collaborators), org))
     for illegal_collaborator in illegal_collaborators:
         print('                - {}'.format(illegal_collaborator))
 
